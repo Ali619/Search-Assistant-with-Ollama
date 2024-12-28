@@ -1,5 +1,6 @@
 import ollama
 import requests
+import trafilatura
 from bs4 import BeautifulSoup
 
 import sys_msgs
@@ -76,6 +77,16 @@ def best_search_result(s_result, query):
     return 0
 
 
+def scrape_webpage(url):
+    try:
+        downloaded = trafilatura.fetch_url(url=url)
+        return trafilatura.extract(
+            downloaded, include_formatting=True, include_links=True
+        )
+    except:
+        return None
+
+
 def ai_search():
     context = None
     print("GENERATING SEARCH QUERY")
@@ -93,6 +104,8 @@ def ai_search():
         except:
             print("Failed to select best search result, trying again...")
             continue
+        page_text = scrape_webpage(page_link)
+        search_results.pop(best_result)
 
 
 def stream_assisstant_response():
