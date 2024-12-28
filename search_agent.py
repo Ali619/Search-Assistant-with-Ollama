@@ -106,6 +106,29 @@ def ai_search():
             continue
         page_text = scrape_webpage(page_link)
         search_results.pop(best_result)
+        if page_text and contains_data_needed(
+            search_content=page_text, query=search_query
+        ):
+            context = page_text
+            context_found = True
+
+    return context
+
+
+def contains_data_needed(search_content, query):
+    sys_msg = sys_msgs.contains_data_msg
+    needed_prompt = f"PAGE_TEXT: {search_content} \nUSER_PROMPT: {assisstant_convo[-1]} \nSEARCH_QUERY: {query}"
+    response = ollama.chat(
+        model="llama3.1:latest",
+        messages=[
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": needed_prompt},
+        ],
+    )
+    content = response["message"]["content"]
+    if "true" in content.lower():
+        return True
+    return False
 
 
 def stream_assisstant_response():
@@ -133,6 +156,20 @@ def main():
         assisstant_convo.append({"role": "user", "content": prompt})
         if search_or_not():
             context = ai_search()
+            # Remove last prompt after ai searched about it
+            assisstant_convo = assisstant_convo[:-1]
+            if context:
+                prompt = f"SEARCH_RESULT: \n{context} \n\nUSER_PROMPT: {prompt}"
+            else:
+                prompt = (
+                    f"USER PROMPT: \n{prompt} \n\nFAILED SEARCH: \nThe "
+                    "AI search model was unable to extract any reliable data. Explain that "
+                    "and ask if the user would like you to search again or respond "
+                    "without web search context. Do not respond if a search was needed "
+                    "and you are getting this message with anything but the above request "
+                    "of how the user would like to proceed"
+                )
+            assisstant_convo.append({"role": "user", "content": prompt})
         stream_assisstant_response()
     print("PROGRAM IS CLOSED")
 
