@@ -2,9 +2,11 @@ import ollama
 import requests
 import trafilatura
 from bs4 import BeautifulSoup
+from colorama import Fore, Style, init
 
 import sys_msgs
 
+init(autoreset=True)
 assisstant_convo = [sys_msgs.assistant_msg]
 
 
@@ -89,22 +91,28 @@ def scrape_webpage(url):
 
 def ai_search():
     context = None
-    print("GENERATING SEARCH QUERY")
+    print(f"{Fore.LIGHTRED_EX}GENERATING SEARCH QUERY...{Style.RESET_ALL}")
     search_query = query_generator()
 
     if search_query[0] == '"':
         search_query = search_query[1:-1]  # extract query if it is between ""
 
+    print(f"{Fore.LIGHTRED_EX}Searching in DuckDuckGo...{Style.RESET_ALL}")
     search_results = duckduckgo_search(search_query)
     context_found = False
-    while not context_found and len(search_results) > 0:
+    while not context_found and len(search_results) > 0:  # Need to fix
         best_result = best_search_result(s_result=search_results, query=search_query)
         try:
             page_link = search_results[best_result]["link"]
         except:
-            print("Failed to select best search result, trying again...")
+            print(
+                f"{Fore.LIGHTRED_EX}Failed to select best search result, trying again...{Style.RESET_ALL}"
+            )
             continue
         page_text = scrape_webpage(page_link)
+        print(
+            f"{Fore.LIGHTGREEN_EX}Found {len(search_results)} results from the WEB{Style.RESET_ALL}"
+        )
         search_results.pop(best_result)
         if page_text and contains_data_needed(
             search_content=page_text, query=search_query
@@ -127,7 +135,9 @@ def contains_data_needed(search_content, query):
     )
     content = response["message"]["content"]
     if "true" in content.lower():
+        print(f"{Fore.LIGHTRED_EX}Here is the query: {query}{Style.RESET_ALL}")
         return True
+    print(f"{Fore.LIGHTRED_EX}Founded data is not relevant{Style.RESET_ALL}")
     return False
 
 
@@ -141,7 +151,11 @@ def stream_assisstant_response():
     print("ASSISSTANT:")
 
     for chunc in response_stream:
-        print(chunc["message"]["content"], end="", flush=True)
+        print(
+            f"{Fore.LIGHTWHITE_EX}{chunc["message"]["content"]}{Style.RESET_ALL}",
+            end="",
+            flush=True,
+        )
         complete_response += chunc["message"]["content"]
     assisstant_convo.append({"role": "assisstant", "content": complete_response})
     print("\n")
@@ -150,7 +164,7 @@ def stream_assisstant_response():
 def main():
     global assisstant_convo
     while True:
-        prompt = input("USER: \n")
+        prompt = input(f"{Fore.LIGHTWHITE_EX}USER: \n")
         if prompt == "exit":
             break
         assisstant_convo.append({"role": "user", "content": prompt})
